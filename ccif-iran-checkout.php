@@ -35,7 +35,7 @@ class CCIF_Iran_Checkout_Rebuild {
         add_filter( 'woocommerce_checkout_fields', [ $this, 'move_order_notes_field' ] );
 
         // Modify field arguments, e.g., to remove '(optional)' text
-        add_filter( 'woocommerce_form_field_args', [ $this, 'remove_optional_text' ], 10, 3 );
+        add_filter( 'woocommerce_form_field_args', [ $this, 'remove_optional_text' ], 999, 3 );
 
         // Save custom fields to order meta
         add_action( 'woocommerce_checkout_create_order', [ $this, 'save_custom_fields_to_order_meta' ], 10, 2 );
@@ -319,7 +319,7 @@ class CCIF_Iran_Checkout_Rebuild {
     }
 
     public function enqueue_assets() {
-        if ( ! is_checkout() && ! is_wc_endpoint_url( 'view-order' ) ) return;
+        if ( ! is_checkout() && ! is_wc_endpoint_url( 'view-order' ) && ! is_order_received_page() ) return;
         wp_enqueue_script( 'ccif-checkout-js', plugin_dir_url( __FILE__ ) . 'assets/js/ccif-checkout.js', ['jquery'], '6.0', true );
         wp_localize_script( 'ccif-checkout-js', 'ccifData', [ 'cities' => $this->load_iran_data()['cities'] ] );
         wp_enqueue_style( 'ccif-checkout-css', plugin_dir_url( __FILE__ ) . 'assets/css/ccif-checkout.css', [], '6.0' );
@@ -370,8 +370,8 @@ class CCIF_Iran_Checkout_Rebuild {
         echo '<h2>اطلاعات فاکتور</h2>';
         echo '<table class="woocommerce-table ccif-invoice-table"><tbody>';
         foreach ( $fields_to_display as $label => $value ) {
-            // Use nl2br for address to preserve line breaks
-            $formatted_value = ( $label === 'آدرس صورتحساب' ) ? nl2br( esc_html( $value ) ) : esc_html( $value );
+            // Use wp_kses_post for address to allow <br> tags, and esc_html for everything else.
+            $formatted_value = ( $label === 'آدرس صورتحساب' ) ? wp_kses_post( $value ) : esc_html( $value );
             echo '<tr><th>' . esc_html( $label ) . ':</th><td>' . $formatted_value . '</td></tr>';
         }
         echo '</tbody></table></div>';

@@ -4,7 +4,8 @@
  */
 
 /* Hide default address block on order pages to prevent duplication */
-.woocommerce-order-details .woocommerce-customer-details {
+.woocommerce-order-received .woocommerce-customer-details,
+.woocommerce-view-order .woocommerce-customer-details {
     display: none;
 }
 
@@ -173,7 +174,8 @@
 }
 
 /* --- Utility Classes --- */
-.ccif-hidden-field {
+.ccif-hidden-field,
+span.optional {
     display: none !important;
 }
 
