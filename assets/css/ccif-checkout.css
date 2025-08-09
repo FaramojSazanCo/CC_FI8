@@ -161,6 +161,12 @@
     text-align: right;
 }
 
+/* Adjust margin for hints that are directly attached to a field */
+.form-row .ccif-hint {
+    margin-top: 8px;
+    display: block;
+}
+
 /* --- Utility Classes --- */
 .ccif-hidden-field {
     display: none !important;

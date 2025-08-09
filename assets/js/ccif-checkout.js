@@ -8,7 +8,64 @@ jQuery(function($) {
     var cities = ccifData.cities;
 
     /**
-     * Toggles visibility of real/legal person fields.
+     * Creates the card-based layout for the checkout form.
+     * This function wraps fields into styled boxes.
+     */
+    function createCheckoutLayout() {
+        var $formContainer = $('.woocommerce-billing-fields .woocommerce-billing-fields__field-wrapper');
+        if (!$formContainer.length) return; // Exit if the main container isn't found
+
+        // Add a global wrapper for overall styling, if it doesn't already exist.
+        if (!$formContainer.parent().hasClass('ccif-checkout-form')) {
+            $formContainer.wrap('<div class="ccif-checkout-form"></div>');
+        }
+
+        // --- Card 1: Invoice Request ---
+        var $invoiceField = $('#billing_invoice_request_field');
+        if ($invoiceField.length && !$invoiceField.closest('.ccif-box').length) {
+            // Add the "invoice-request-box" class to get the green background style from CSS
+            $invoiceField.wrap('<div class="ccif-box invoice-request-box" id="ccif-invoice-box"></div>');
+            $('#ccif-invoice-box').prepend('<h2>درخواست صدور فاکتور رسمی (اختیاری)</h2><p class="ccif-hint">در صورت نیاز به فاکتور رسمی، این گزینه را انتخاب و تمام اطلاعات خریدار را به دقت وارد نمایید. در غیر این صورت، تنها تکمیل اطلاعات ارسال کافی است.</p>');
+        }
+
+        // --- Card 2: Buyer Information ---
+        var $buyerFields = $('#billing_person_type_field, #billing_first_name_field, #billing_last_name_field, #billing_national_code_field, #billing_company_name_field, #billing_economic_code_field, #billing_agent_first_name_field, #billing_agent_last_name_field');
+        if ($buyerFields.length && !$buyerFields.first().closest('.ccif-box').length) {
+            $buyerFields.wrapAll('<div class="ccif-box" id="ccif-buyer-info-box"><div class="ccif-buyer-fields-wrapper"></div></div>');
+            $('#ccif-buyer-info-box').prepend('<h2 class="ccif-person-info-header">اطلاعات خریدار</h2>');
+
+            // Wrap real person fields
+            $('#billing_first_name_field, #billing_last_name_field, #billing_national_code_field').wrapAll('<div class="ccif-real-person-fields-wrapper" style="display: none;"></div>');
+            // Use the standard hint class for better consistency
+            $('#billing_national_code_field p.form-row').append('<span class="ccif-hint">۱۰ رقم بدون خط تیره</span>');
+
+            // Wrap legal person fields
+            $('#billing_company_name_field, #billing_economic_code_field, #billing_agent_first_name_field, #billing_agent_last_name_field').wrapAll('<div class="ccif-legal-person-fields-wrapper" style="display: none;"></div>');
+        }
+
+        // --- Card 3: Shipping Information ---
+        var $shippingFields = $('#billing_custom_state_field, #billing_custom_city_field, #billing_address_1_field, #billing_postcode_field, #billing_phone_field');
+        if ($shippingFields.length && !$shippingFields.first().closest('.ccif-box').length) {
+            $shippingFields.wrapAll('<div class="ccif-box" id="ccif-shipping-info-box"></div>');
+            $('#ccif-shipping-info-box').prepend('<h2 class="ccif-address-info-header">اطلاعات ارسال</h2>');
+        }
+
+        // --- Card 4: Order Notes ---
+        // WooCommerce might render notes inside or outside the main billing form. We find it and move it.
+        var $notesContainer = $('.woocommerce-additional-fields');
+        if ($notesContainer.length) {
+            // Move the whole container to the end of our main form for consistent styling
+            $formContainer.parent().append($notesContainer);
+            $notesContainer.wrap('<div class="ccif-box" id="ccif-notes-box"></div>');
+            // Check if a title already exists, if not, add one.
+            if (!$notesContainer.find('h3').length) {
+                $notesContainer.prepend('<h2 class="ccif-order-notes-header">توضیحات تکمیلی</h2>');
+            }
+        }
+    }
+
+    /**
+     * Toggles visibility of real/legal person fields based on selection.
      */
     function togglePersonFields() {
         var personType = $('#billing_person_type').val();
@@ -16,14 +73,14 @@ jQuery(function($) {
         var $legalPersonWrapper = $('.ccif-legal-person-fields-wrapper');
 
         if (personType === 'real') {
-            $legalPersonWrapper.slideUp(250);
-            $realPersonWrapper.slideDown(350);
+            $legalPersonWrapper.slideUp(200);
+            $realPersonWrapper.slideDown(300);
         } else if (personType === 'legal') {
-            $realPersonWrapper.slideUp(250);
-            $legalPersonWrapper.slideDown(350);
+            $realPersonWrapper.slideUp(200);
+            $legalPersonWrapper.slideDown(300);
         } else {
-            $realPersonWrapper.slideUp(250);
-            $legalPersonWrapper.slideUp(250);
+            $realPersonWrapper.slideUp(200);
+            $legalPersonWrapper.slideUp(200);
         }
     }
 
@@ -33,7 +90,7 @@ jQuery(function($) {
     function populateCustomCities() {
         var state = $('#billing_custom_state').val();
         var $cityField = $('#billing_custom_city');
-        var originalCityVal = $('#billing_city').val(); // Get value from original hidden field
+        var originalCityVal = $('#billing_city').val();
 
         $cityField.empty().append('<option value="">ابتدا استان را انتخاب کنید</option>');
 
@@ -45,41 +102,49 @@ jQuery(function($) {
                     selected: cityName === originalCityVal
                 }));
             });
+            $cityField.val(originalCityVal).trigger('change');
         }
-        // After populating, ensure the custom city's value is synced to the original
-        $cityField.trigger('change');
     }
 
-    // --- Synchronization Logic ---
-
-    // 1. When the VISIBLE custom state changes...
+    // --- Event Handlers ---
     $('body').on('change', '#billing_custom_state', function() {
-        var selectedState = $(this).val();
-        // a. Update the HIDDEN original state field
-        $('#billing_state').val(selectedState);
-        // b. Manually trigger 'change' on the original field to make WC's AJAX work
-        $('#billing_state').trigger('change');
-        // c. Populate our custom city dropdown
+        $('#billing_state').val($(this).val()).trigger('change');
         populateCustomCities();
     });
 
-    // 2. When the VISIBLE custom city changes...
     $('body').on('change', '#billing_custom_city', function() {
-        var selectedCity = $(this).val();
-        // a. Update the HIDDEN original city field
-        $('#billing_city').val(selectedCity);
-        // b. Manually trigger 'change' on the original field
-        $('#billing_city').trigger('change');
+        $('#billing_city').val($(this).val()).trigger('change');
     });
 
-    // --- Initial page load logic ---
-
-    // Set initial custom state value from the original hidden field (in case of validation error reload)
-    $('#billing_custom_state').val($('#billing_state').val());
-    // Trigger the change handler to populate cities on load
-    $('#billing_custom_state').trigger('change');
-
-    // Person fields
-    togglePersonFields();
     $('body').on('change', '#billing_person_type', togglePersonFields);
+
+    // --- Initial Page Load Logic ---
+    // Use a small timeout to ensure all elements are rendered, especially during AJAX reloads.
+    setTimeout(function() {
+        // 1. Create the layout
+        createCheckoutLayout();
+
+        // 2. Set initial custom state value from the hidden original field
+        var initialState = $('#billing_state').val();
+        if (initialState) {
+            $('#billing_custom_state').val(initialState);
+        }
+
+        // 3. Populate cities based on the initial state
+        populateCustomCities();
+
+        // 4. Trigger the person fields toggle to set the initial correct view
+        togglePersonFields();
+    }, 100);
+
+    // Also run on WooCommerce's 'update_checkout' event (e.g., after shipping calculation)
+    $(document.body).on('updated_checkout', function() {
+        createCheckoutLayout();
+        var initialState = $('#billing_state').val();
+        if (initialState) {
+            $('#billing_custom_state').val(initialState);
+        }
+        populateCustomCities();
+        togglePersonFields();
+    });
 });

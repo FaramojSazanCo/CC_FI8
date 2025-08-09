@@ -201,14 +201,53 @@ class CCIF_Iran_Checkout_Rebuild {
     public function modify_checkout_fields( $fields ) {
         $iran_data = $this->load_iran_data();
 
-        // --- 1. Define our NEW custom fields that the user will see ---
+        // --- Define our NEW custom fields ---
         $custom_fields = [
+            'billing_invoice_request' => [
+                'type' => 'checkbox',
+                'label' => 'درخواست صدور فاکتور رسمی',
+                'class' => ['form-row-wide'],
+                'priority' => 1,
+            ],
+            'billing_person_type' => [
+                'type' => 'select',
+                'label' => 'نوع شخص',
+                'class' => ['form-row-wide'],
+                'options' => ['' => 'انتخاب کنید', 'real' => 'حقیقی', 'legal' => 'حقوقی'],
+                'priority' => 10,
+            ],
+            'billing_national_code' => [
+                'label' => 'کد ملی',
+                'class' => ['form-row-wide'],
+                'placeholder' => '۱۰ رقم بدون خط تیره',
+                'priority' => 22,
+            ],
+            'billing_company_name' => [
+                'label' => 'نام شرکت',
+                'class' => ['form-row-first'],
+                'priority' => 30,
+            ],
+            'billing_economic_code' => [
+                'label' => 'شناسه ملی/اقتصادی',
+                'class' => ['form-row-last'],
+                'priority' => 31,
+            ],
+            'billing_agent_first_name' => [
+                'label' => 'نام نماینده',
+                'class' => ['form-row-first'],
+                'priority' => 32,
+            ],
+            'billing_agent_last_name' => [
+                'label' => 'نام خانوادگی نماینده',
+                'class' => ['form-row-last'],
+                'priority' => 33,
+            ],
             'billing_custom_state' => [
                 'type' => 'select',
                 'label' => __('استان', 'woocommerce'),
                 'options' => [ '' => 'انتخاب کنید' ] + $iran_data['states'],
                 'class' => ['form-row-first'],
-                'priority' => 41,
+                'priority' => 40,
                 'required' => true,
             ],
             'billing_custom_city' => [
@@ -216,41 +255,39 @@ class CCIF_Iran_Checkout_Rebuild {
                 'label' => __('شهر', 'woocommerce'),
                 'options' => [ '' => 'ابتدا استان را انتخاب کنید' ],
                 'class' => ['form-row-last'],
-                'priority' => 42,
+                'priority' => 41,
                 'required' => true,
             ],
-             'billing_invoice_request' => ['type' => 'checkbox', 'label' => 'درخواست صدور فاکتور رسمی', 'class' => ['form-row-wide'], 'priority' => 1],
-            'billing_person_type'     => ['type' => 'select', 'label' => 'نوع شخص', 'class' => ['form-row-wide'], 'options' => ['' => 'انتخاب کنید', 'real' => 'حقیقی', 'legal' => 'حقوقی'], 'priority' => 10],
-            'billing_national_code'   => ['label' => 'کد ملی', 'class' => ['form-row-wide'], 'placeholder' => '۱۰ رقم بدون خط تیره', 'priority' => 23],
-            'billing_company_name'    => ['label' => 'نام شرکت', 'class' => ['form-row-first'], 'priority' => 31],
-            'billing_economic_code'   => ['label' => 'شناسه ملی/اقتصادی', 'class' => ['form-row-last'], 'priority' => 32],
-            'billing_agent_first_name' => ['label' => 'نام نماینده', 'class' => ['form-row-first'], 'priority' => 33],
-            'billing_agent_last_name' => ['label' => 'نام خانوادگی نماینده', 'class' => ['form-row-last'], 'priority' => 34],
         ];
 
         $fields['billing'] = array_merge($fields['billing'], $custom_fields);
 
-        // --- 2. Modify the ORIGINAL WooCommerce fields ---
-        // Hide the original state and city fields. We will sync our custom fields to these with JS.
+        // --- Modify the ORIGINAL WooCommerce fields ---
+        // As per user, do not touch the logic of state/city fields. Only reorder them.
         $fields['billing']['billing_state']['class'][] = 'ccif-hidden-field';
         $fields['billing']['billing_city']['class'][] = 'ccif-hidden-field';
 
-        // --- 3. Adjust other standard fields as needed ---
-        $fields['billing']['billing_first_name']['priority'] = 21;
-        $fields['billing']['billing_last_name']['priority'] = 22;
+        // Set priorities for standard fields and make name fields optional
+        $fields['billing']['billing_first_name']['priority'] = 20;
+        $fields['billing']['billing_first_name']['required'] = false;
+        $fields['billing']['billing_last_name']['priority'] = 21;
+        $fields['billing']['billing_last_name']['required'] = false;
+
         $fields['billing']['billing_address_1']['label'] = 'آدرس خیابان';
         $fields['billing']['billing_address_1']['placeholder'] = 'آدرس کامل خیابان، کوچه، پلاک، واحد';
-        $fields['billing']['billing_address_1']['priority'] = 51;
+        $fields['billing']['billing_address_1']['priority'] = 50;
+
         $fields['billing']['billing_postcode']['label'] = 'کدپستی';
         $fields['billing']['billing_postcode']['placeholder'] = 'بدون فاصله و با اعداد انگلیسی';
-        $fields['billing']['billing_postcode']['priority'] = 61;
-        $fields['billing']['billing_phone']['priority'] = 62;
+        $fields['billing']['billing_postcode']['priority'] = 60;
 
-        // --- 4. Unset fields we don't need at all ---
+        $fields['billing']['billing_phone']['priority'] = 61;
+
+        // --- Unset fields we don't need at all ---
         unset($fields['billing']['billing_company']);
         unset($fields['billing']['billing_address_2']);
 
-        // --- 5. Reorder All Billing Fields ---
+        // --- Reorder All Billing Fields ---
         uasort($fields['billing'], 'wc_checkout_fields_uasort_comparison');
 
         return $fields;
