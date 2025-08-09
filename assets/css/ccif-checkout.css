@@ -197,3 +197,36 @@
 .ccif-order-notes-header::before {
     content: '📝'; /* Notes icon */
 }
+
+/* Styling for custom data box on Thank You and View Order pages */
+.ccif-order-details-box {
+    margin-top: 2em;
+    padding: 1.5em;
+    border: 1px solid var(--ccif-border-color, #dee2e6);
+    border-radius: 8px;
+    background: var(--ccif-box-bg-color, #fff);
+    direction: rtl;
+}
+.ccif-order-details-box h2 {
+    font-size: 1.25rem;
+    margin-top: 0;
+    padding-bottom: 1em;
+    border-bottom: 1px solid var(--ccif-border-color, #dee2e6);
+    color: var(--ccif-heading-color, #212529);
+    font-family: var(--ccif-font-family);
+}
+.ccif-order-details-box table {
+    width: 100%;
+    border: none;
+    font-family: var(--ccif-font-family);
+}
+.ccif-order-details-box th,
+.ccif-order-details-box td {
+    text-align: right;
+    padding: 8px;
+    border: none;
+    color: var(--ccif-text-color, #495057);
+}
+.ccif-order-details-box th {
+    font-weight: 700;
+}

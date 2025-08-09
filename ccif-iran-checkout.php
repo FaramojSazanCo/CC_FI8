@@ -49,6 +49,9 @@ class CCIF_Iran_Checkout_Rebuild {
         // Enqueue scripts and styles
         add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_assets' ] );
 
+        // Display custom fields on the order details pages (thank you & my-account)
+        add_action( 'woocommerce_order_details_after_order_table', [ $this, 'display_custom_fields_on_order_pages' ], 20, 1 );
+
         // The new approach will use a template override, so all old layout hooks are removed.
         // We will add the template override filter later.
     }
@@ -309,10 +312,54 @@ class CCIF_Iran_Checkout_Rebuild {
     }
 
     public function enqueue_assets() {
-        if ( ! is_checkout() ) return;
+        if ( ! is_checkout() && ! is_wc_endpoint_url( 'view-order' ) ) return;
         wp_enqueue_script( 'ccif-checkout-js', plugin_dir_url( __FILE__ ) . 'assets/js/ccif-checkout.js', ['jquery'], '6.0', true );
         wp_localize_script( 'ccif-checkout-js', 'ccifData', [ 'cities' => $this->load_iran_data()['cities'] ] );
         wp_enqueue_style( 'ccif-checkout-css', plugin_dir_url( __FILE__ ) . 'assets/css/ccif-checkout.css', [], '6.0' );
+    }
+
+    public function display_custom_fields_on_order_pages( $order ) {
+        if ( ! is_a( $order, 'WC_Order' ) ) {
+            $order = wc_get_order( $order );
+        }
+        if ( ! $order ) {
+            return;
+        }
+
+        // Only show this section if an invoice was requested.
+        if ( ! $order->get_meta( '_billing_invoice_request' ) ) {
+            return;
+        }
+
+        $person_type = $order->get_meta( '_billing_person_type' );
+        $person_type_label = $person_type === 'real' ? 'حقیقی' : ( $person_type === 'legal' ? 'حقوقی' : '' );
+
+        $fields_to_display = [ 'نوع شخص' => $person_type_label ];
+
+        if ( $person_type === 'real' ) {
+            $fields_to_display['نام'] = $order->get_billing_first_name();
+            $fields_to_display['نام خانوادگی'] = $order->get_billing_last_name();
+            $fields_to_display['کد ملی'] = $order->get_meta( '_billing_national_code' );
+        } elseif ( $person_type === 'legal' ) {
+            $fields_to_display['نام شرکت'] = $order->get_meta( '_billing_company_name' );
+            $fields_to_display['شناسه ملی/اقتصادی'] = $order->get_meta( '_billing_economic_code' );
+            $fields_to_display['نام نماینده'] = $order->get_meta( '_billing_agent_first_name' );
+            $fields_to_display['نام خانوادگی نماینده'] = $order->get_meta( '_billing_agent_last_name' );
+        }
+
+        $fields_to_display = array_filter( $fields_to_display );
+
+        if ( empty( $fields_to_display ) ) {
+            return;
+        }
+
+        echo '<div class="ccif-order-details-box">';
+        echo '<h2>اطلاعات فاکتور</h2>';
+        echo '<table class="woocommerce-table"><tbody>';
+        foreach ( $fields_to_display as $label => $value ) {
+            echo '<tr><th>' . esc_html( $label ) . ':</th><td>' . esc_html( $value ) . '</td></tr>';
+        }
+        echo '</tbody></table></div>';
     }
 
     // All old layout functions are removed. The layout will be handled by a template override.
