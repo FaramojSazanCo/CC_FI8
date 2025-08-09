@@ -55,29 +55,44 @@ class CCIF_Iran_Checkout_Rebuild {
 
     public function validate_custom_fields() {
         $is_invoice_requested = isset( $_POST['billing_invoice_request'] ) && $_POST['billing_invoice_request'] == 1;
-        $person_type = isset( $_POST['billing_person_type'] ) ? $_POST['billing_person_type'] : '';
+        $person_type = isset( $_POST['billing_person_type'] ) ? sanitize_text_field($_POST['billing_person_type']) : '';
 
-        // --- Postcode Validation (only if the field is not empty) ---
+        // --- Standard Format Validations ---
         if ( ! empty( $_POST['billing_postcode'] ) && ( ! is_numeric( $_POST['billing_postcode'] ) || strlen( $_POST['billing_postcode'] ) !== 10 ) ) {
             wc_add_notice( __( 'لطفاً یک <strong>کد پستی</strong> معتبر ۱۰ رقمی و عددی وارد کنید.' ), 'error' );
         }
-
-        // --- Phone Validation (only if the field is not empty) ---
         if ( ! empty( $_POST['billing_phone'] ) && ! is_numeric( $_POST['billing_phone'] ) ) {
             wc_add_notice( __( 'فیلد <strong>شماره تماس</strong> باید فقط شامل اعداد باشد.' ), 'error' );
         }
 
-        // --- Conditional Validation based on Invoice Request ---
+        // --- Conditional Validation for Invoice ---
         if ( $is_invoice_requested ) {
-            if ( $person_type === 'real' && ! empty( $_POST['billing_national_code'] ) ) {
-                if ( ! is_numeric( $_POST['billing_national_code'] ) || strlen( $_POST['billing_national_code'] ) !== 10 ) {
+            // 1. Validate Person Type
+            if ( empty( $person_type ) ) {
+                wc_add_notice( __( 'برای صدور فاکتور رسمی، لطفاً <strong>نوع شخص</strong> را انتخاب کنید.' ), 'error' );
+            }
+
+            // 2. Validate Real Person Fields
+            if ( $person_type === 'real' ) {
+                if ( empty( $_POST['billing_first_name'] ) ) wc_add_notice( __( '<strong>نام</strong> برای صدور فاکتور الزامی است.' ), 'error' );
+                if ( empty( $_POST['billing_last_name'] ) ) wc_add_notice( __( '<strong>نام خانوادگی</strong> برای صدور فاکتور الزامی است.' ), 'error' );
+                if ( empty( $_POST['billing_national_code'] ) ) {
+                    wc_add_notice( __( '<strong>کد ملی</strong> برای صدور فاکتور الزامی است.' ), 'error' );
+                } elseif ( ! is_numeric( $_POST['billing_national_code'] ) || strlen( $_POST['billing_national_code'] ) !== 10 ) {
                     wc_add_notice( __( 'لطفاً یک <strong>کد ملی</strong> معتبر ۱۰ رقمی و عددی وارد کنید.' ), 'error' );
                 }
             }
-            if ( $person_type === 'legal' && ! empty( $_POST['billing_economic_code'] ) ) {
-                if ( ! is_numeric( $_POST['billing_economic_code'] ) ) {
+
+            // 3. Validate Legal Person Fields
+            if ( $person_type === 'legal' ) {
+                if ( empty( $_POST['billing_company_name'] ) ) wc_add_notice( __( '<strong>نام شرکت</strong> برای صدور فاکتور الزامی است.' ), 'error' );
+                if ( empty( $_POST['billing_economic_code'] ) ) {
+                     wc_add_notice( __( '<strong>شناسه ملی/اقتصادی</strong> برای صدور فاکتور الزامی است.' ), 'error' );
+                } elseif ( ! is_numeric( $_POST['billing_economic_code'] ) ) {
                     wc_add_notice( __( 'فیلد <strong>شناسه ملی/اقتصادی</strong> باید فقط شامل اعداد باشد.' ), 'error' );
                 }
+                if ( empty( $_POST['billing_agent_first_name'] ) ) wc_add_notice( __( '<strong>نام نماینده</strong> برای صدور فاکتور الزامی است.' ), 'error' );
+                if ( empty( $_POST['billing_agent_last_name'] ) ) wc_add_notice( __( '<strong>نام خانوادگی نماینده</strong> برای صدور فاکتور الزامی است.' ), 'error' );
             }
         }
     }

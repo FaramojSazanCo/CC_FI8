@@ -25,7 +25,8 @@ jQuery(function($) {
         if ($invoiceField.length && !$invoiceField.closest('.ccif-box').length) {
             // Add the "invoice-request-box" class to get the green background style from CSS
             $invoiceField.wrap('<div class="ccif-box invoice-request-box" id="ccif-invoice-box"></div>');
-            $('#ccif-invoice-box').prepend('<h2>درخواست صدور فاکتور رسمی (اختیاری)</h2><p class="ccif-hint">در صورت نیاز به فاکتور رسمی، این گزینه را انتخاب و تمام اطلاعات خریدار را به دقت وارد نمایید. در غیر این صورت، تنها تکمیل اطلاعات ارسال کافی است.</p>');
+            // Removed "(اختیاری)" from the title as requested
+            $('#ccif-invoice-box').prepend('<h2>درخواست صدور فاکتور رسمی</h2><p class="ccif-hint">در صورت نیاز به فاکتور رسمی، این گزینه را انتخاب و تمام اطلاعات خریدار را به دقت وارد نمایید. در غیر این صورت، تنها تکمیل اطلاعات ارسال کافی است.</p>');
         }
 
         // --- Card 2: Buyer Information ---
@@ -53,7 +54,8 @@ jQuery(function($) {
         // --- Card 4: Order Notes ---
         // WooCommerce might render notes inside or outside the main billing form. We find it and move it.
         var $notesContainer = $('.woocommerce-additional-fields');
-        if ($notesContainer.length) {
+        // FIX: Added guard to prevent re-wrapping on checkout update
+        if ($notesContainer.length && !$notesContainer.closest('.ccif-box').length) {
             // Move the whole container to the end of our main form for consistent styling
             $formContainer.parent().append($notesContainer);
             $notesContainer.wrap('<div class="ccif-box" id="ccif-notes-box"></div>');
@@ -87,6 +89,41 @@ jQuery(function($) {
     /**
      * Populates the custom city dropdown based on the custom state dropdown.
      */
+    /**
+     * Toggles the 'required' state of buyer info fields based on the invoice request checkbox
+     * and the selected person type.
+     */
+    function toggleRequiredFields() {
+        var isInvoiceRequested = $('#billing_invoice_request').is(':checked');
+        var personType = $('#billing_person_type').val();
+        var $personTypeField = $('#billing_person_type_field');
+        var $realPersonFields = $('.ccif-real-person-fields-wrapper .form-row');
+        var $legalPersonFields = $('.ccif-legal-person-fields-wrapper .form-row');
+
+        // First, handle the person type field itself. It's required if an invoice is requested.
+        $personTypeField.toggleClass('ccif-is-required', isInvoiceRequested);
+
+        if (isInvoiceRequested) {
+            // If invoice is requested, requirement depends on person type
+            if (personType === 'real') {
+                $realPersonFields.addClass('ccif-is-required');
+                $legalPersonFields.removeClass('ccif-is-required');
+            } else if (personType === 'legal') {
+                $realPersonFields.removeClass('ccif-is-required');
+                $legalPersonFields.addClass('ccif-is-required');
+            } else {
+                // No person type selected yet, so don't make any sub-fields required
+                $realPersonFields.removeClass('ccif-is-required');
+                $legalPersonFields.removeClass('ccif-is-required');
+            }
+        } else {
+            // If invoice is not requested, nothing in this box is required.
+            $personTypeField.removeClass('ccif-is-required');
+            $realPersonFields.removeClass('ccif-is-required');
+            $legalPersonFields.removeClass('ccif-is-required');
+        }
+    }
+
     function populateCustomCities() {
         var state = $('#billing_custom_state').val();
         var $cityField = $('#billing_custom_city');
@@ -116,7 +153,10 @@ jQuery(function($) {
         $('#billing_city').val($(this).val()).trigger('change');
     });
 
-    $('body').on('change', '#billing_person_type', togglePersonFields);
+    $('body').on('change', '#billing_person_type, #billing_invoice_request', function() {
+        togglePersonFields();
+        toggleRequiredFields();
+    });
 
     // --- Initial Page Load Logic ---
     // Use a small timeout to ensure all elements are rendered, especially during AJAX reloads.
@@ -133,8 +173,9 @@ jQuery(function($) {
         // 3. Populate cities based on the initial state
         populateCustomCities();
 
-        // 4. Trigger the person fields toggle to set the initial correct view
+        // 4. Trigger the toggles to set the initial correct view
         togglePersonFields();
+        toggleRequiredFields();
     }, 100);
 
     // Also run on WooCommerce's 'update_checkout' event (e.g., after shipping calculation)
@@ -146,5 +187,6 @@ jQuery(function($) {
         }
         populateCustomCities();
         togglePersonFields();
+        toggleRequiredFields();
     });
 });
