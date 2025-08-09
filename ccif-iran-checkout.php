@@ -52,6 +52,9 @@ class CCIF_Iran_Checkout_Rebuild {
         // Display custom fields on the order details pages (thank you & my-account)
         add_action( 'woocommerce_order_details_after_order_table', [ $this, 'display_custom_fields_on_order_pages' ], 20, 1 );
 
+        // Display custom fields in the admin order edit page
+        add_action( 'woocommerce_admin_order_data_after_billing_address', [ $this, 'display_custom_fields_in_admin_order' ], 10, 1 );
+
         // The new approach will use a template override, so all old layout hooks are removed.
         // We will add the template override filter later.
     }
@@ -151,11 +154,15 @@ class CCIF_Iran_Checkout_Rebuild {
     }
 
     public function remove_optional_text( $args, $key, $value ) {
-        // This function removes the "(optional)" text from the labels of non-required fields.
-        if ( ! $args['required'] && isset($args['label']) ) {
-            // This regex is more flexible. It looks for an optional whitespace or &nbsp;
-            // followed by the <span class="optional">...</span> tag and removes it.
+        if ( isset($args['label']) ) {
+            // This function now removes the "(optional)" text from ALL fields, required or not,
+            // to ensure consistency and address user feedback.
+
+            // First, remove the <span> tag that WooCommerce adds to non-required fields.
             $args['label'] = preg_replace( '/(\s|&nbsp;)?<span class="optional">.*?<\/span>/i', '', $args['label'] );
+
+            // Second, remove the literal text `(اختیاری)` in case it was hardcoded in a label.
+            $args['label'] = str_replace( '(اختیاری)', '', $args['label'] );
         }
         return $args;
     }
@@ -347,6 +354,12 @@ class CCIF_Iran_Checkout_Rebuild {
             $fields_to_display['نام خانوادگی نماینده'] = $order->get_meta( '_billing_agent_last_name' );
         }
 
+        // Add the formatted billing address
+        $address = $order->get_formatted_billing_address();
+        if ( $address ) {
+            $fields_to_display['آدرس صورتحساب'] = $address;
+        }
+
         $fields_to_display = array_filter( $fields_to_display );
 
         if ( empty( $fields_to_display ) ) {
@@ -355,11 +368,43 @@ class CCIF_Iran_Checkout_Rebuild {
 
         echo '<div class="ccif-order-details-box">';
         echo '<h2>اطلاعات فاکتور</h2>';
-        echo '<table class="woocommerce-table"><tbody>';
+        echo '<table class="woocommerce-table ccif-invoice-table"><tbody>';
         foreach ( $fields_to_display as $label => $value ) {
-            echo '<tr><th>' . esc_html( $label ) . ':</th><td>' . esc_html( $value ) . '</td></tr>';
+            // Use nl2br for address to preserve line breaks
+            $formatted_value = ( $label === 'آدرس صورتحساب' ) ? nl2br( esc_html( $value ) ) : esc_html( $value );
+            echo '<tr><th>' . esc_html( $label ) . ':</th><td>' . $formatted_value . '</td></tr>';
         }
         echo '</tbody></table></div>';
+    }
+
+    public function display_custom_fields_in_admin_order( $order ) {
+        if ( ! $order->get_meta( '_billing_invoice_request' ) ) {
+            return;
+        }
+
+        echo '<div class="order_data_column">';
+        echo '<h4>' . __( 'اطلاعات تکمیلی فاکتور', 'ccif-iran-checkout' ) . '</h4>';
+
+        $person_type = $order->get_meta( '_billing_person_type' );
+        $person_type_label = $person_type === 'real' ? 'حقیقی' : ( $person_type === 'legal' ? 'حقوقی' : '' );
+
+        $fields_to_display = [ 'نوع شخص' => $person_type_label ];
+
+        if ( $person_type === 'real' ) {
+            $fields_to_display['کد ملی'] = $order->get_meta( '_billing_national_code' );
+        } elseif ( $person_type === 'legal' ) {
+            $fields_to_display['نام شرکت'] = $order->get_meta( '_billing_company_name' );
+            $fields_to_display['شناسه ملی/اقتصادی'] = $order->get_meta( '_billing_economic_code' );
+            $fields_to_display['نام نماینده'] = $order->get_meta( '_billing_agent_first_name' );
+            $fields_to_display['نام خانوادگی نماینده'] = $order->get_meta( '_billing_agent_last_name' );
+        }
+
+        foreach ( $fields_to_display as $label => $value ) {
+            if ( ! empty( $value ) ) {
+                echo '<p><strong>' . esc_html( $label ) . ':</strong> ' . esc_html( $value ) . '</p>';
+            }
+        }
+        echo '</div>';
     }
 
     // All old layout functions are removed. The layout will be handled by a template override.

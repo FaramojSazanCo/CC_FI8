@@ -3,6 +3,11 @@
  * Version: 7.0
  */
 
+/* Hide default address block on order pages to prevent duplication */
+.woocommerce-order-details .woocommerce-customer-details {
+    display: none;
+}
+
 /* --- Base Form Container & Variables --- */
 .ccif-checkout-form {
     --ccif-bg-color: #f8f9fa; /* Light grey background for the whole area */
@@ -200,33 +205,44 @@
 
 /* Styling for custom data box on Thank You and View Order pages */
 .ccif-order-details-box {
-    margin-top: 2em;
-    padding: 1.5em;
+    margin: 2em auto; /* Center the box */
+    padding: 2em;
     border: 1px solid var(--ccif-border-color, #dee2e6);
     border-radius: 8px;
     background: var(--ccif-box-bg-color, #fff);
     direction: rtl;
+    max-width: 600px; /* Set a max-width for better readability */
+    box-shadow: 0 5px 15px rgba(0,0,0,0.08);
 }
 .ccif-order-details-box h2 {
-    font-size: 1.25rem;
+    text-align: center;
+    font-size: 1.4rem;
     margin-top: 0;
     padding-bottom: 1em;
     border-bottom: 1px solid var(--ccif-border-color, #dee2e6);
     color: var(--ccif-heading-color, #212529);
     font-family: var(--ccif-font-family);
 }
-.ccif-order-details-box table {
+.ccif-order-details-box .ccif-invoice-table {
     width: 100%;
-    border: none;
+    border: 1px solid #e9ecef;
+    border-collapse: collapse;
     font-family: var(--ccif-font-family);
 }
-.ccif-order-details-box th,
-.ccif-order-details-box td {
+.ccif-order-details-box .ccif-invoice-table th,
+.ccif-order-details-box .ccif-invoice-table td {
     text-align: right;
-    padding: 8px;
-    border: none;
+    padding: 12px 15px;
+    border-bottom: 1px solid #e9ecef;
     color: var(--ccif-text-color, #495057);
+    vertical-align: top;
 }
-.ccif-order-details-box th {
+.ccif-order-details-box .ccif-invoice-table th {
     font-weight: 700;
+    background-color: #f8f9fa;
+    width: 35%;
+}
+.ccif-order-details-box .ccif-invoice-table tr:last-child th,
+.ccif-order-details-box .ccif-invoice-table tr:last-child td {
+    border-bottom: none;
 }
