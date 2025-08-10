@@ -56,7 +56,7 @@ class CCIF_Iran_Checkout_Rebuild {
         add_action( 'woocommerce_admin_order_data_after_billing_address', [ $this, 'display_custom_fields_in_admin_order' ], 10, 1 );
 
         // Add custom columns to the admin orders list
-        add_filter( 'manage_edit-shop_order_columns', [ $this, 'add_invoice_details_column_to_admin_orders_list' ], 20 );
+        add_filter( 'manage_edit-shop_order_columns', [ $this, 'add_invoice_details_column_to_admin_orders_list' ], 999 );
         add_action( 'manage_shop_order_posts_custom_column', [ $this, 'populate_invoice_details_column' ], 10, 2 );
 
         // The new approach will use a template override, so all old layout hooks are removed.
@@ -414,15 +414,16 @@ class CCIF_Iran_Checkout_Rebuild {
     // All old layout functions are removed. The layout will be handled by a template override.
 
     public function add_invoice_details_column_to_admin_orders_list( $columns ) {
-        $reordered_columns = [];
-        foreach ( $columns as $key => $column ) {
-            $reordered_columns[ $key ] = $column;
-            if ( $key === 'order_status' ) {
-                $reordered_columns['invoice_request'] = __( 'فاکتور رسمی', 'ccif-iran-checkout' );
-                $reordered_columns['person_type'] = __( 'نوع شخص', 'ccif-iran-checkout' );
+        $new_columns = [];
+        foreach ( $columns as $key => $value ) {
+            // Insert our columns before the 'order_date' column.
+            if ( $key === 'order_date' ) {
+                $new_columns['invoice_request'] = __( 'فاکتور رسمی', 'ccif-iran-checkout' );
+                $new_columns['person_type'] = __( 'نوع شخص', 'ccif-iran-checkout' );
             }
+            $new_columns[ $key ] = $value;
         }
-        return $reordered_columns;
+        return $new_columns;
     }
 
     public function populate_invoice_details_column( $column, $post_id ) {
