@@ -248,3 +248,51 @@ span.optional {
 .ccif-order-details-box .ccif-invoice-table tr:last-child td {
     border-bottom: none;
 }
+
+/* Style for emphasizing invoice request titles */
+.ccif-invoice-requested-title {
+    color: #d63638 !important;
+    font-weight: 700 !important;
+}
+
+@media print {
+    /* Hide irrelevant elements when printing from the order page */
+    .ccif-checkout-form,
+    .woocommerce-order-details .woocommerce-customer-details {
+        display: none;
+    }
+
+    /* Style the invoice details box like a clean label for printing */
+    .ccif-order-details-box {
+        margin: 0;
+        padding: 0;
+        border: 2px dashed #777;
+        border-radius: 0;
+        background: #fff;
+        box-shadow: none;
+        max-width: 100%;
+        page-break-inside: avoid; /* Try to prevent the box from splitting across pages */
+    }
+
+    .ccif-order-details-box h2 {
+        font-size: 1.1rem;
+        text-align: center;
+        border: none;
+        padding: 0.5em;
+        background-color: #e9e9e9;
+        color: #000;
+    }
+
+    .ccif-order-details-box .ccif-invoice-table,
+    .ccif-order-details-box .ccif-invoice-table th,
+    .ccif-order-details-box .ccif-invoice-table td {
+        border: none;
+        background: none;
+        color: #000;
+    }
+
+    .ccif-order-details-box .ccif-invoice-table td {
+        padding-top: 4px;
+        padding-bottom: 4px;
+    }
+}

@@ -50,10 +50,14 @@ class CCIF_Iran_Checkout_Rebuild {
         add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_assets' ] );
 
         // Display custom fields on the order details pages (thank you & my-account)
-        add_action( 'woocommerce_order_details_after_order_table', [ $this, 'display_custom_fields_on_order_pages' ], 20, 1 );
+        add_action( 'woocommerce_order_details_after_order_table', [ $this, 'display_custom_fields_on_order_pages' ], 999, 1 );
 
         // Display custom fields in the admin order edit page
         add_action( 'woocommerce_admin_order_data_after_billing_address', [ $this, 'display_custom_fields_in_admin_order' ], 10, 1 );
+
+        // Add custom columns to the admin orders list
+        add_filter( 'manage_edit-shop_order_columns', [ $this, 'add_invoice_details_column_to_admin_orders_list' ], 20 );
+        add_action( 'manage_shop_order_posts_custom_column', [ $this, 'populate_invoice_details_column' ], 10, 2 );
 
         // The new approach will use a template override, so all old layout hooks are removed.
         // We will add the template override filter later.
@@ -367,7 +371,7 @@ class CCIF_Iran_Checkout_Rebuild {
         }
 
         echo '<div class="ccif-order-details-box">';
-        echo '<h2>اطلاعات فاکتور</h2>';
+        echo '<h2 class="ccif-invoice-requested-title">اطلاعات فاکتور</h2>';
         echo '<table class="woocommerce-table ccif-invoice-table"><tbody>';
         foreach ( $fields_to_display as $label => $value ) {
             // Use wp_kses_post for address to allow <br> tags, and esc_html for everything else.
@@ -383,7 +387,7 @@ class CCIF_Iran_Checkout_Rebuild {
         }
 
         echo '<div class="order_data_column">';
-        echo '<h4>' . __( 'اطلاعات تکمیلی فاکتور', 'ccif-iran-checkout' ) . '</h4>';
+        echo '<h4 class="ccif-invoice-requested-title">' . __( 'اطلاعات تکمیلی فاکتور', 'ccif-iran-checkout' ) . '</h4>';
 
         $person_type = $order->get_meta( '_billing_person_type' );
         $person_type_label = $person_type === 'real' ? 'حقیقی' : ( $person_type === 'legal' ? 'حقوقی' : '' );
@@ -409,6 +413,45 @@ class CCIF_Iran_Checkout_Rebuild {
 
     // All old layout functions are removed. The layout will be handled by a template override.
 
+    public function add_invoice_details_column_to_admin_orders_list( $columns ) {
+        $reordered_columns = [];
+        foreach ( $columns as $key => $column ) {
+            $reordered_columns[ $key ] = $column;
+            if ( $key === 'order_status' ) {
+                $reordered_columns['invoice_request'] = __( 'فاکتور رسمی', 'ccif-iran-checkout' );
+                $reordered_columns['person_type'] = __( 'نوع شخص', 'ccif-iran-checkout' );
+            }
+        }
+        return $reordered_columns;
+    }
+
+    public function populate_invoice_details_column( $column, $post_id ) {
+        $order = wc_get_order( $post_id );
+        if ( ! $order ) return;
+
+        switch ( $column ) {
+            case 'invoice_request':
+                if ( $order->get_meta( '_billing_invoice_request' ) ) {
+                    echo '<strong style="color: #d63638;">' . __( 'بله', 'ccif-iran-checkout' ) . '</strong>';
+                } else {
+                    echo __( 'خیر', 'ccif-iran-checkout' );
+                }
+                break;
+
+            case 'person_type':
+                $person_type = $order->get_meta( '_billing_person_type' );
+                if ( $person_type === 'real' ) {
+                    echo __( 'حقیقی', 'ccif-iran-checkout' );
+                } elseif ( $person_type === 'legal' ) {
+                    echo __( 'حقوقی', 'ccif-iran-checkout' );
+                } else {
+                    // If invoice was requested but no type is set, it's an edge case.
+                    // Otherwise, just show a dash.
+                    echo $order->get_meta( '_billing_invoice_request' ) ? '<i>نامشخص</i>' : '—';
+                }
+                break;
+        }
+    }
 
     private function log_message( $message ) {
         if ( defined( 'WP_DEBUG' ) && WP_DEBUG === true ) {
