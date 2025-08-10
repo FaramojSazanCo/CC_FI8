@@ -55,9 +55,15 @@ class CCIF_Iran_Checkout_Rebuild {
         // Display custom fields in the admin order edit page
         add_action( 'woocommerce_admin_order_data_after_billing_address', [ $this, 'display_custom_fields_in_admin_order' ], 10, 1 );
 
-        // Add custom columns to the admin orders list
+        // --- Add custom columns to the admin orders list (HPOS and legacy compatible) ---
+
+        // Legacy (non-HPOS) hooks
         add_filter( 'manage_edit-shop_order_columns', [ $this, 'add_invoice_details_column_to_admin_orders_list' ], 999 );
-        add_action( 'manage_shop_order_posts_custom_column', [ $this, 'populate_invoice_details_column' ], 10, 2 );
+        add_action( 'manage_shop_order_posts_custom_column', [ $this, 'populate_invoice_details_column_legacy' ], 10, 2 );
+
+        // HPOS-compatible hooks
+        add_filter( 'manage_woocommerce_page_wc-orders_columns', [ $this, 'add_invoice_details_column_to_admin_orders_list' ], 999 );
+        add_action( 'manage_woocommerce_page_wc-orders_custom_column', [ $this, 'populate_invoice_details_column' ], 10, 2 );
 
         // The new approach will use a template override, so all old layout hooks are removed.
         // We will add the template override filter later.
@@ -416,7 +422,7 @@ class CCIF_Iran_Checkout_Rebuild {
     public function add_invoice_details_column_to_admin_orders_list( $columns ) {
         $new_columns = [];
         foreach ( $columns as $key => $value ) {
-            // Insert our columns before the 'order_date' column.
+            // Insert our columns before the 'order_date' column for better positioning.
             if ( $key === 'order_date' ) {
                 $new_columns['invoice_request'] = __( 'فاکتور رسمی', 'ccif-iran-checkout' );
                 $new_columns['person_type'] = __( 'نوع شخص', 'ccif-iran-checkout' );
@@ -426,8 +432,13 @@ class CCIF_Iran_Checkout_Rebuild {
         return $new_columns;
     }
 
-    public function populate_invoice_details_column( $column, $post_id ) {
-        $order = wc_get_order( $post_id );
+    // Wrapper for the legacy (non-HPOS) hook, which passes post_id
+    public function populate_invoice_details_column_legacy( $column, $post_id ) {
+        $this->populate_invoice_details_column( $column, wc_get_order( $post_id ) );
+    }
+
+    // Main function for populating columns (HPOS-compatible, accepts WC_Order object)
+    public function populate_invoice_details_column( $column, $order ) {
         if ( ! $order ) return;
 
         switch ( $column ) {
@@ -446,8 +457,6 @@ class CCIF_Iran_Checkout_Rebuild {
                 } elseif ( $person_type === 'legal' ) {
                     echo __( 'حقوقی', 'ccif-iran-checkout' );
                 } else {
-                    // If invoice was requested but no type is set, it's an edge case.
-                    // Otherwise, just show a dash.
                     echo $order->get_meta( '_billing_invoice_request' ) ? '<i>نامشخص</i>' : '—';
                 }
                 break;
